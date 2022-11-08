@@ -107,16 +107,20 @@ def updateBalls(npc, player):
 
 
 #test shots vs npcs and creatwe debris on collision
+#udpate npc and shots list
 def updateShots(npc, shots, debris):
    for i in range(len(npc)):
       for j in range(len(shots)):
          if distance(shots[j].pos, npc[i].pos) < npc[i].size + shots[j].size * 2:
             npc[i].tag = True
+            shots[j].size -= 6
+            if shots[j].size < 6:
+               shots[j].tag = True
             for k in range(randrange(20) + 1):
                aAngle = randrange(360)/360.0*2*math.pi
                aDir = mul((math.cos(aAngle), math.sin(aAngle)), uniform(PLAYER_SIZE/6, PLAYER_SIZE))
                debris.append( Debris(npc[i].pos, add(aDir, npc[i].dir), randrange(5) + 1, life=(randrange(100)+ 20)))
-   return [ic for ic in npc if not ic.tag]
+   return [ic for ic in npc if not ic.tag], [ish for ish in shots if not ish.tag]
 
 #debris enriches player, stuff disappears
 def updateDebris(player, debris):
@@ -233,11 +237,13 @@ while running:
       shots.append( Shot(player.pos, mul(player.dir, (player.size / 6) + 1 ), (player.size / 6) + 1))
       player.size -= (player.size / 6) + 1
       PLAYER_FIRE = False
+   #update npcs
    for i in range(len(npc)):
       npc[i].update()
    updateBalls(npc, player)
+   #update shots
    shots = [shot for shot in shots if shot.update()]
-   npc = updateShots(npc, shots, debris)    #check if we hit any npcs
+   npc, shots = updateShots(npc, shots, debris)    #check if we hit any npcs
    #check if player burst
    # if player goes over size, explode and shrink
    if player.size > 50:

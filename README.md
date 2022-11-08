@@ -1,5 +1,7 @@
 # BallGame
 todo:
+*ai player congtroller, behaviors, feed into movement and shooting
+ decide between shooting and seeking npcs
 *interesting, mouse pushes instead of pulls
 *player blows up....what's inside?
 *dampen debris and leave

@@ -29,17 +29,22 @@ def add(apos, bpos):
 def sub(apos, bpos):
    return (bpos[0] - apos[0] , bpos[1] - apos[1])
 
-def normalize(v):
+def mag(v):
    amag = v[0] * v[0] + v[1] * v[1]
    amag += 0.0001
    amag = math.sqrt(amag)
+   return amag
+
+
+def normalize(v):
+   amag = mag(v)
    return (v[0] / amag, v[1] / amag)
 
 def mul(adir, ascalar):
    return (adir[0] * ascalar, adir[1] * ascalar)
 
 WIDTH, HEIGHT = 1000, 600
-PLAYER_SPEED = 1
+PLAYER_SPEED = .1
 PLAYER_SIZE = 5
 FALL_SPEED = 1
 
@@ -65,6 +70,18 @@ class Ball:
          pg.draw.circle(screen, 'yellow', self.pos, self.size * 2, 3)
 
 
+class Player(Ball):
+   def __init__(self, pos, dir=(0, 0), size=1):
+      Ball.__init__(self, pos, dir, size)
+      self.vel = (0, 0)
+      self.dampen = .9
+
+
+   def update(self, force):
+      self.vel = add(self.vel, force)
+      self.vel = mul(self.vel, self.dampen)
+      self.pos = add(self.pos, self.vel)
+
 class Shot(Ball):
    def __init__(self, pos, dir, size=1  ):
       Ball.__init__(self,pos, dir, size )
@@ -87,6 +104,7 @@ def updateBalls(npc, player):
       if distance(player.pos, npc[i].pos) < npc[i].size + player.size:
          npc[i].tag = True
          player.size += 1
+
 
 #test shots vs npcs and creatwe debris on collision
 def updateShots(npc, shots, debris):
@@ -134,8 +152,8 @@ PLAYER_FIRE = False
 PLAYER_FIRE2 = False
 MOVE_L, MOVE_R, MOVE_U, MOVE_D = 0, 0, 0, 0
 playerPos = (WIDTH/2, HEIGHT/2)
-player = Ball(playerPos, size=PLAYER_SIZE)
-
+player = Player(playerPos, size=PLAYER_SIZE)
+tick = 0 #use to count off intervals
 clock = pg.time.Clock()
 shots = [] #shots player fires
 debris = []    #debris from npcs fires
@@ -197,8 +215,18 @@ while running:
       dy = -PLAYER_SPEED
    if MOVE_D:
       dy = PLAYER_SPEED
-   player.dir = (dx, dy)
-   player.update()
+   # use mouse position to move player
+   amouseDelta = sub(player.pos, pg.mouse.get_pos())
+   amag = mag(amouseDelta)
+   MOVE_RANGE = 300
+   amouseNorm = mul(normalize(amouseDelta), MOVE_RANGE)
+   MOVE_SCALE = .001
+   if amag < MOVE_RANGE:
+      amouseDelta = mul(sub(amouseNorm, amouseDelta), MOVE_SCALE)
+      dx -= amouseDelta[0]
+      dy -= amouseDelta[1]
+   # player.dir = (dx, dy)
+   player.update((dx, dy))
    #fire a shot if all good
    if (dx != 0 or dy != 0) and PLAYER_FIRE and player.size > 6:
       print("shot fire")
@@ -210,10 +238,35 @@ while running:
    updateBalls(npc, player)
    shots = [shot for shot in shots if shot.update()]
    npc = updateShots(npc, shots, debris)    #check if we hit any npcs
+   #check if player burst
+   # if player goes over size, explode and shrink
+   if player.size > 50:
+      adiff = 100 - len(npc)
+      for i in range(adiff):
+         randDist = uniform(1., player.size)
+         randAngle = uniform(0., 359.9) / 360. * math.pi * 2.
+         randPoint = add( mul( (math.cos(randAngle), math.sin(randAngle)), randDist), player.pos)
+         # print(f'randPoint:{randPoint}')
+         npc.append(Ball(randPoint, (0, FALL_SPEED), color='white'))
+      player.pos = add(player.pos, mul(player.vel, player.size))
+      player.size = PLAYER_SIZE
+
+   #fill in missing npcs
    if len(npc) < 100:
-      npc.append(Ball(( randrange(10,WIDTH - 10), - 10 - randrange(0,10) ), (0, FALL_SPEED), PLAYER_SIZE, color='white' ))
+      if tick % 100 == 0:
+         npc.append(Ball(( randrange(10,WIDTH - 10), - 10 - randrange(0,10) ), (0, FALL_SPEED), PLAYER_SIZE, color='white' ))
+   tick += 1
    debris = [stuff for stuff in debris if stuff.update()]
    debris = updateDebris(player, debris)
+   #keep player in field
+   if player.pos[0] < player.size:
+      player.pos = (player.size, player.pos[1])
+   if player.pos[1] < player.size:
+      player.pos = (player.pos[0], player.size)
+   if player.pos[0] > WIDTH - player.size:
+      player.pos = (WIDTH - player.size, player.pos[1])
+   if player.pos[1] > HEIGHT - player.size:
+      player.pos = (player.pos[0], HEIGHT - player.size)
 #RENDER
    screen.fill('black')
    player.render(screen)

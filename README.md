@@ -1,5 +1,6 @@
 # BallGame
 todo:
+*interesting, mouse pushes instead of pulls
 *player blows up....what's inside?
 *dampen debris and leave
 *make life a component

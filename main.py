@@ -4,12 +4,11 @@
 #move with delay to 8 cardinal
 #input is always 8 cardinal, or analog x,y
 #normalize move distance with 8 cardinal
-import math
 #static object, moving is extra
 #dynamic object, includes movement, create moving object class
-
 #entity, has input flags related to movement
 #movement is limited to certain values
+import math
 import math
 from math import sqrt
 from random import *
@@ -26,6 +25,15 @@ def distance(theAPos, theBPos):
 def add(apos, bpos):
    return (apos[0] + bpos[0] , apos[1] + bpos[1])
 
+#vector created is first term points to second
+def sub(apos, bpos):
+   return (bpos[0] - apos[0] , bpos[1] - apos[1])
+
+def normalize(v):
+   amag = v[0] * v[0] + v[1] * v[1]
+   amag += 0.0001
+   amag = math.sqrt(amag)
+   return (v[0] / amag, v[1] / amag)
 
 def mul(adir, ascalar):
    return (adir[0] * ascalar, adir[1] * ascalar)
@@ -61,8 +69,6 @@ class Shot(Ball):
    def __init__(self, pos, dir, size=1  ):
       Ball.__init__(self,pos, dir, size )
       self.size = int(self.size)
-      print(f"Shot made1")
-      print(f"Shot made2")
 
    def update(self):
       global WIDTH, HEIGHT
@@ -90,7 +96,7 @@ def updateShots(npc, shots, debris):
             npc[i].tag = True
             for k in range(randrange(20) + 1):
                aAngle = randrange(360)/360.0*2*math.pi
-               aDir = (math.cos(aAngle), math.sin(aAngle))
+               aDir = mul((math.cos(aAngle), math.sin(aAngle)), uniform(PLAYER_SIZE/6, PLAYER_SIZE))
                debris.append( Debris(npc[i].pos, add(aDir, npc[i].dir), randrange(5) + 1, life=(randrange(100)+ 20)))
    return [ic for ic in npc if not ic.tag]
 
@@ -106,9 +112,11 @@ class Debris(Shot):
    def __init__(self, pos, dir, size, life=20):
       Shot.__init__(self, pos, dir, size)
       self.life  = life
+      self.dampen = uniform(.75, 1.)
 
    def update(self):
       Shot.update(self)
+      self.dir = mul( self.dir, self.dampen)
       if self.life > 0:
          self.life -= 1
       else:
@@ -123,6 +131,7 @@ class Debris(Shot):
 pg.init()
 screen = pg.display.set_mode((WIDTH, HEIGHT))
 PLAYER_FIRE = False
+PLAYER_FIRE2 = False
 MOVE_L, MOVE_R, MOVE_U, MOVE_D = 0, 0, 0, 0
 playerPos = (WIDTH/2, HEIGHT/2)
 player = Ball(playerPos, size=PLAYER_SIZE)
@@ -167,6 +176,17 @@ while running:
             MOVE_R = False
          if event.key == K_SPACE:
             PLAYER_FIRE = False
+      elif event.type == MOUSEBUTTONDOWN:
+         print(f"mDown:{pg.mouse.get_pressed()}")
+         PLAYER_FIRE2 = True
+
+   if PLAYER_FIRE2 and player.size > 6:
+      adelta = sub(player.pos, pg.mouse.get_pos())
+      adir = mul(normalize(adelta ) , PLAYER_SIZE)
+      print(f'Mouse:{pg.mouse.get_pos()}, dir:{adir}, delta:{adelta}')
+      shots.append( Shot(player.pos, adir, player.size) )
+      player.size -= 1
+   PLAYER_FIRE2 = False
 #update
    dx, dy = 0, 0
    if MOVE_L:
@@ -190,6 +210,8 @@ while running:
    updateBalls(npc, player)
    shots = [shot for shot in shots if shot.update()]
    npc = updateShots(npc, shots, debris)    #check if we hit any npcs
+   if len(npc) < 100:
+      npc.append(Ball(( randrange(10,WIDTH - 10), - 10 - randrange(0,10) ), (0, FALL_SPEED), PLAYER_SIZE, color='white' ))
    debris = [stuff for stuff in debris if stuff.update()]
    debris = updateDebris(player, debris)
 #RENDER

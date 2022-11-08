@@ -1,5 +1,10 @@
 # BallGame
 todo:
+*player blows up....what's inside?
+*dampen debris and leave
+*make life a component
+*consume shot on hit (maybe take away life from it, and size / scale)
+*make debris move away from hit direction, based on shot size
 *add ai controlled players, move around collecting and growing as well
 *random gen field
 *consumed npc delta from max slowly feeds back into the system

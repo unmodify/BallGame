@@ -1,5 +1,10 @@
 # BallGame
 todo:
+*w/ added colors same color grows, complementary color shrinks, adjunct sticks, oblique bounces
+*size of debris cloud creates a force push on local npcs / debris, scales on debri size
+*move parallax 
+*move field based on player move
+*slow random move npc, collision clumps or breaks based on speed and angle
 *ai player congtroller, behaviors, feed into movement and shooting
  decide between shooting and seeking npcs
 *interesting, mouse pushes instead of pulls

@@ -43,11 +43,17 @@ def normalize(v):
 def mul(adir, ascalar):
    return (adir[0] * ascalar, adir[1] * ascalar)
 
+def randPointAtDistance(thePoint, theDistance):
+   randAngle = uniform(0., 359.9) / 360. * math.pi * 2.
+   randPoint = add(mul((math.cos(randAngle), math.sin(randAngle)), theDistance), thePoint)
+   return randPoint
+
 WIDTH, HEIGHT = 1000, 600
 PLAYER_SPEED = .1
 PLAYER_SIZE = 5
 FALL_SPEED = 1
-
+colors = ['white', 'cyan', 'yellow', 'green']
+NPC_COUNT = 200
 
 class Ball:
    def __init__(self, pos, dir=(0, 0), size=PLAYER_SIZE, color='red'):
@@ -105,6 +111,28 @@ def updateBalls(npc, player):
          npc[i].tag = True
          player.size += 1
 
+class Joint(Ball):
+   def __init__(self, theA, theB):
+      Ball.__init__(self, theA.pos)
+      self.bodyA = theA
+      self.bodyB = theB
+      self.dist = mag( sub(theA.pos, theB.pos) )
+      self.tag = False
+
+   def update(self):
+      if self.bodyA.tag or self.bodyB.tag:
+         self.tag = True
+      else:
+         delta = sub( self.bodyA.pos, self.bodyB.pos)
+         amag = mag(delta)
+         amag = self.dist - amag
+         deltaN = normalize(delta)
+         deltaR = mul(deltaN, amag)# * .5)
+         # self.bodyA.pos = add(self.bodyA.pos, deltaR)
+         self.bodyB.pos = add(self.bodyA.pos, mul(deltaR, 1.))
+
+   def render(self, screen):
+      Shot.render(self, screen)
 
 #test shots vs npcs and creatwe debris on collision
 #udpate npc and shots list
@@ -116,6 +144,11 @@ def updateShots(npc, shots, debris):
             shots[j].size -= 6
             if shots[j].size < 6:
                shots[j].tag = True
+            elif npc[i].color == 'cyan':
+               delta = sub(shots[j].pos, npc[i].pos)
+               delta = (-delta[1], delta[0])
+               amag = mag(shots[j].dir)
+               shots[j].dir = mul( normalize(delta), amag *.9)
             for k in range(randrange(20) + 1):
                aAngle = randrange(360)/360.0*2*math.pi
                aDir = mul((math.cos(aAngle), math.sin(aAngle)), uniform(PLAYER_SIZE/6, PLAYER_SIZE))
@@ -161,10 +194,14 @@ tick = 0 #use to count off intervals
 clock = pg.time.Clock()
 shots = [] #shots player fires
 debris = []    #debris from npcs fires
+joints = []    #debris from npcs fires
+joints.append( Joint(player, Ball(randPointAtDistance(player.pos, PLAYER_SIZE * 10))))
+aux = []
+aux.append( joints[0].bodyB)
 npc = []
-for i in range(100):
+for i in range(NPC_COUNT):
    # npc.append( {'pos':( randrange(10,WIDTH - 10), randrange(10, HEIGHT - 10) ),'tag':False} )
-   npc.append( Ball(( randrange(10,WIDTH - 10), randrange(10, HEIGHT - 10) ), (0, FALL_SPEED), PLAYER_SIZE, color='white' ))
+   npc.append( Ball(( randrange(10,WIDTH - 10), randrange(10, HEIGHT - 10) ), (0, FALL_SPEED), PLAYER_SIZE, color=colors[randrange(0,len(colors))] ))
 running = True
 while running:
    for event in pg.event.get():
@@ -247,20 +284,21 @@ while running:
    #check if player burst
    # if player goes over size, explode and shrink
    if player.size > 50:
-      adiff = 100 - len(npc)
+      adiff = NPC_COUNT - len(npc)
       for i in range(adiff):
          randDist = uniform(1., player.size)
          randAngle = uniform(0., 359.9) / 360. * math.pi * 2.
-         randPoint = add( mul( (math.cos(randAngle), math.sin(randAngle)), randDist), player.pos)
+         # randPoint = add( mul( (math.cos(randAngle), math.sin(randAngle)), randDist), player.pos)
+         randPoint = randPointAtDistance(player.pos, randDist)
          # print(f'randPoint:{randPoint}')
          npc.append(Ball(randPoint, (0, FALL_SPEED), color='white'))
       player.pos = add(player.pos, mul(player.vel, player.size))
       player.size = PLAYER_SIZE
 
    #fill in missing npcs
-   if len(npc) < 100:
+   if len(npc) < NPC_COUNT:
       if tick % 100 == 0:
-         npc.append(Ball(( randrange(10,WIDTH - 10), - 10 - randrange(0,10) ), (0, FALL_SPEED), PLAYER_SIZE, color='white' ))
+         npc.append(Ball(( randrange(10,WIDTH - 10), - 10 - randrange(0,10) ), (0, FALL_SPEED), PLAYER_SIZE, color=colors[randrange(len(colors))] ))
    tick += 1
    debris = [stuff for stuff in debris if stuff.update()]
    debris = updateDebris(player, debris)
@@ -273,6 +311,10 @@ while running:
       player.pos = (WIDTH - player.size, player.pos[1])
    if player.pos[1] > HEIGHT - player.size:
       player.pos = (player.pos[0], HEIGHT - player.size)
+   for a in aux:
+      a.update()
+   for j in joints:
+      j.update()
 #RENDER
    screen.fill('black')
    player.render(screen)
@@ -282,6 +324,10 @@ while running:
       shot.render(screen)
    for stuff in debris:
       stuff.render(screen)
+   for joint in joints:
+      joint.render(screen)
+   for a in aux:
+      a.render(screen)
    pg.display.flip()
    clock.tick(60)
 print("Exited")

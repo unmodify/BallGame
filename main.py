@@ -60,6 +60,7 @@ class Ball:
 class Shot(Ball):
    def __init__(self, pos, dir, size=1  ):
       Ball.__init__(self,pos, dir, size )
+      self.size = int(self.size)
       print(f"Shot made1")
       print(f"Shot made2")
 
@@ -72,14 +73,16 @@ class Shot(Ball):
       return True
 
    def render(self, screen):
-      pg.draw.line(screen, self.color, self.pos, add(self.pos, mul( self.dir, 3)))
+      pg.draw.line(screen, self.color, self.pos, add(self.pos, mul( self.dir, 3)),self.size)
 
-
+#update positions and reset on scene exit
 def updateBalls(npc, player):
    for i in range(len(npc)):
       if distance(player.pos, npc[i].pos) < npc[i].size + player.size:
          npc[i].tag = True
+         player.size += 1
 
+#test shots vs npcs and creatwe debris on collision
 def updateShots(npc, shots, debris):
    for i in range(len(npc)):
       for j in range(len(shots)):
@@ -89,7 +92,16 @@ def updateShots(npc, shots, debris):
                aAngle = randrange(360)/360.0*2*math.pi
                aDir = (math.cos(aAngle), math.sin(aAngle))
                debris.append( Debris(npc[i].pos, add(aDir, npc[i].dir), randrange(5) + 1, life=(randrange(100)+ 20)))
+   return [ic for ic in npc if not ic.tag]
 
+#debris enriches player, stuff disappears
+def updateDebris(player, debris):
+    for stuff in debris:
+        if distance(stuff.pos, player.pos) < stuff.size + player.size:
+            player.size += 1
+            stuff.tag = True
+    return [stuff for stuff in debris if not stuff.tag]
+    
 class Debris(Shot):
    def __init__(self, pos, dir, size, life=20):
       Shot.__init__(self, pos, dir, size)
@@ -168,17 +180,18 @@ while running:
    player.dir = (dx, dy)
    player.update()
    #fire a shot if all good
-   if (dx != 0 or dy != 0) and PLAYER_FIRE:
+   if (dx != 0 or dy != 0) and PLAYER_FIRE and player.size > 6:
       print("shot fire")
-      shots.append( Shot(player.pos, mul(player.dir, 2)))
+      shots.append( Shot(player.pos, mul(player.dir, (player.size / 6) + 1 ), (player.size / 6) + 1))
+      player.size -= (player.size / 6) + 1
       PLAYER_FIRE = False
    for i in range(len(npc)):
       npc[i].update()
    updateBalls(npc, player)
    shots = [shot for shot in shots if shot.update()]
-   updateShots(npc, shots, debris)    #check if we hit any npcs
+   npc = updateShots(npc, shots, debris)    #check if we hit any npcs
    debris = [stuff for stuff in debris if stuff.update()]
-
+   debris = updateDebris(player, debris)
 #RENDER
    screen.fill('black')
    player.render(screen)

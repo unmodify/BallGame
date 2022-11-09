@@ -94,12 +94,38 @@ class Debris(Shot):
       Ball.render(self,screen)
 
 
-#update positions and reset on scene exit
+#to be a little closer to each other
+def adjustCloser(posA, posB):
+   # print(f'adjust1:{posA}, {posB}')
+   delta = sub(posA, posB)
+   amag = mag(delta)
+   deltaR = (0, 0)
+   if amag > PLAYER_SIZE * 2.5:
+      deltaN = normalize(delta)
+      deltaR = mul(deltaN, .1)  # * .5)
+      posA = add(posA, deltaR)
+      posB = sub(deltaR, posB)
+   elif amag < PLAYER_SIZE*2:
+      posA = sub(deltaR, posA)
+      posB = add(deltaR, posB)
+   # self.bodyA.pos = add(self.bodyA.pos, deltaR)
+   # print(f'adjust:{delta}, mag:{amag}, deltaR:{deltaR}')
+   
+   # print(f'adjust3:{posA}, {posB}')
+   return posA,posB
+
+
 def updateBalls(npc, player):
    for i in range(len(npc)):
+      # check each vs player
       if distance(player.pos, npc[i].pos) < npc[i].size + player.size:
          npc[i].tag = True
          player.size += 1
+   #check vs each other
+   for i in range(len(npc)-1):
+      for j in range(i+1,len(npc)):
+         if distance(npc[i].pos, npc[j].pos) < 200 and npc[i].color == 'cyan' and npc[j].color == 'cyan':
+            npc[i].pos, npc[j].pos = adjustCloser(npc[i].pos, npc[j].pos)
 
 class Joint(Ball):
    def __init__(self, theA, theB, name):
@@ -114,15 +140,13 @@ class Joint(Ball):
       if self.bodyA.tag or self.bodyB.tag:
          self.tag = True
       else:
-         delta = sub( self.bodyA.pos, self.bodyB.pos)
+         delta = sub( self.bodyB.pos, self.bodyA.pos)
          amag = mag(delta)
-         amag = self.dist - amag
-         print(f'Joint:{self.name}:{amag}, apos:{self.bodyA.pos}, bpos:{self.bodyB.pos}')
-         if abs(amag) > 0.1:
-            deltaN = normalize(delta)
-            deltaR = mul(deltaN, amag)# * .5)
-            # self.bodyA.pos = add(self.bodyA.pos, deltaR)
-            self.bodyB.pos = add(self.bodyA.pos, mul(deltaR, 1.))
+         amag = amag - self.dist
+         # print(f'Joint:{self.name}:{amag}, apos:{self.bodyA.pos}, bpos:{self.bodyB.pos}')
+         deltaN = normalize(delta)
+         deltaR = mul(deltaN, amag * 1.)
+         self.bodyB.pos = add(self.bodyB.pos, mul(deltaR, 1.))
 
    def render(self, screen):
       Shot.render(self, screen)
@@ -169,13 +193,13 @@ clock = pg.time.Clock()
 shots = [] #shots player fires
 debris = []    #debris from npcs fires
 joints = []    #debris from npcs fires
-joints.append( Joint(player,    Ball(randPointAtDistance(player.pos, PLAYER_SIZE * 3)),name="A"))
-joints.append( Joint(joints[0], Ball(randPointAtDistance(joints[0].pos, PLAYER_SIZE * 3)),name="B"))
-joints.append( Joint(joints[1], Ball(randPointAtDistance(joints[1].pos, PLAYER_SIZE * 3)),name="C"))
+joints.append( Joint(player,    Ball(randPointAtDistance(player.pos, PLAYER_SIZE * 1.5)),name="A"))
+for i in range(1,20,1):
+   joints.append( Joint(joints[i-1].bodyB, Ball(randPointAtDistance(joints[i-1].pos, PLAYER_SIZE * 1.5)),name=(chr(ord("B")+i))))
 aux = []
-aux.append( joints[0].bodyB)
-aux.append( joints[1].bodyB)
-aux.append( joints[2].bodyB)
+for j in joints:
+   aux.append(j.bodyB)
+
 npc = []
 for i in range(NPC_COUNT):
    # npc.append( {'pos':( randrange(10,WIDTH - 10), randrange(10, HEIGHT - 10) ),'tag':False} )
@@ -222,7 +246,7 @@ while running:
       adir = mul(normalize(adelta ) , PLAYER_SIZE)
       print(f'Mouse:{pg.mouse.get_pos()}, dir:{adir}, delta:{adelta}')
       shots.append( Shot(player.pos, adir, player.size) )
-      player.size -= 1
+      player.size -= 6
    PLAYER_FIRE2 = False
 #update
    dx, dy = 0, 0

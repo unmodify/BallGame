@@ -1,5 +1,7 @@
 # BallGame
 todo:
+*shots kill ants and so does debris
+*ants eat size, ants come out of yellow on hit 
 *debris grows tail, npcs grow head
 *another player with tail and shots hit tail
 *w/ added colors same color grows, complementary color shrinks, adjunct sticks, oblique bounces

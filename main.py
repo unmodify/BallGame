@@ -8,45 +8,13 @@
 #dynamic object, includes movement, create moving object class
 #entity, has input flags related to movement
 #movement is limited to certain values
+
 import math
-import math
-from math import sqrt
+from utility import *
 from random import *
 import pygame as pg
 from pygame.locals import *
 
-
-def distance(theAPos, theBPos):
-   aDelta = (theAPos[0] - theBPos[0], theAPos[1] - theBPos[1])
-   aDist = sqrt(aDelta[0] * aDelta[0] + aDelta[1] * aDelta[1])
-   return int(aDist)
-
-
-def add(apos, bpos):
-   return (apos[0] + bpos[0] , apos[1] + bpos[1])
-
-#vector created is first term points to second
-def sub(apos, bpos):
-   return (bpos[0] - apos[0] , bpos[1] - apos[1])
-
-def mag(v):
-   amag = v[0] * v[0] + v[1] * v[1]
-   amag += 0.0001
-   amag = math.sqrt(amag)
-   return amag
-
-
-def normalize(v):
-   amag = mag(v)
-   return (v[0] / amag, v[1] / amag)
-
-def mul(adir, ascalar):
-   return (adir[0] * ascalar, adir[1] * ascalar)
-
-def randPointAtDistance(thePoint, theDistance):
-   randAngle = uniform(0., 359.9) / 360. * math.pi * 2.
-   randPoint = add(mul((math.cos(randAngle), math.sin(randAngle)), theDistance), thePoint)
-   return randPoint
 
 WIDTH, HEIGHT = 1000, 600
 PLAYER_SPEED = .1
@@ -88,6 +56,7 @@ class Player(Ball):
       self.vel = mul(self.vel, self.dampen)
       self.pos = add(self.pos, self.vel)
 
+
 class Shot(Ball):
    def __init__(self, pos, dir, size=1  ):
       Ball.__init__(self,pos, dir, size )
@@ -104,6 +73,27 @@ class Shot(Ball):
    def render(self, screen):
       pg.draw.line(screen, self.color, self.pos, add(self.pos, mul( self.dir, 3)),self.size)
 
+
+class Debris(Shot):
+   def __init__(self, pos, dir, size, life=20):
+      Shot.__init__(self, pos, dir, size)
+      self.life  = life
+      self.dampen = uniform(.75, 1.)
+
+   def update(self):
+      Shot.update(self)
+      self.dir = mul( self.dir, self.dampen)
+      if self.life > 0:
+         self.life -= 1
+      else:
+         return False
+      return True
+
+   def render(self, screen):
+      Shot.render(self,screen)
+      Ball.render(self,screen)
+
+
 #update positions and reset on scene exit
 def updateBalls(npc, player):
    for i in range(len(npc)):
@@ -112,12 +102,13 @@ def updateBalls(npc, player):
          player.size += 1
 
 class Joint(Ball):
-   def __init__(self, theA, theB):
+   def __init__(self, theA, theB, name):
       Ball.__init__(self, theA.pos)
       self.bodyA = theA
       self.bodyB = theB
       self.dist = mag( sub(theA.pos, theB.pos) )
       self.tag = False
+      self.name = name
 
    def update(self):
       if self.bodyA.tag or self.bodyB.tag:
@@ -126,10 +117,12 @@ class Joint(Ball):
          delta = sub( self.bodyA.pos, self.bodyB.pos)
          amag = mag(delta)
          amag = self.dist - amag
-         deltaN = normalize(delta)
-         deltaR = mul(deltaN, amag)# * .5)
-         # self.bodyA.pos = add(self.bodyA.pos, deltaR)
-         self.bodyB.pos = add(self.bodyA.pos, mul(deltaR, 1.))
+         print(f'Joint:{self.name}:{amag}, apos:{self.bodyA.pos}, bpos:{self.bodyB.pos}')
+         if abs(amag) > 0.1:
+            deltaN = normalize(delta)
+            deltaR = mul(deltaN, amag)# * .5)
+            # self.bodyA.pos = add(self.bodyA.pos, deltaR)
+            self.bodyB.pos = add(self.bodyA.pos, mul(deltaR, 1.))
 
    def render(self, screen):
       Shot.render(self, screen)
@@ -163,25 +156,6 @@ def updateDebris(player, debris):
             stuff.tag = True
     return [stuff for stuff in debris if not stuff.tag]
     
-class Debris(Shot):
-   def __init__(self, pos, dir, size, life=20):
-      Shot.__init__(self, pos, dir, size)
-      self.life  = life
-      self.dampen = uniform(.75, 1.)
-
-   def update(self):
-      Shot.update(self)
-      self.dir = mul( self.dir, self.dampen)
-      if self.life > 0:
-         self.life -= 1
-      else:
-         return False
-      return True
-
-   def render(self, screen):
-      Shot.render(self,screen)
-      Ball.render(self,screen)
-
 
 pg.init()
 screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -195,9 +169,13 @@ clock = pg.time.Clock()
 shots = [] #shots player fires
 debris = []    #debris from npcs fires
 joints = []    #debris from npcs fires
-joints.append( Joint(player, Ball(randPointAtDistance(player.pos, PLAYER_SIZE * 10))))
+joints.append( Joint(player,    Ball(randPointAtDistance(player.pos, PLAYER_SIZE * 3)),name="A"))
+joints.append( Joint(joints[0], Ball(randPointAtDistance(joints[0].pos, PLAYER_SIZE * 3)),name="B"))
+joints.append( Joint(joints[1], Ball(randPointAtDistance(joints[1].pos, PLAYER_SIZE * 3)),name="C"))
 aux = []
 aux.append( joints[0].bodyB)
+aux.append( joints[1].bodyB)
+aux.append( joints[2].bodyB)
 npc = []
 for i in range(NPC_COUNT):
    # npc.append( {'pos':( randrange(10,WIDTH - 10), randrange(10, HEIGHT - 10) ),'tag':False} )
@@ -313,7 +291,9 @@ while running:
       player.pos = (player.pos[0], HEIGHT - player.size)
    for a in aux:
       a.update()
+   print(f'JointsUp:{len(joints)}')
    for j in joints:
+      # print(f'a:{j.bodyA}, b:{j.bodyB}')
       j.update()
 #RENDER
    screen.fill('black')

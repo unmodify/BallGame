@@ -1,6 +1,6 @@
 # BallGame
 todo:
-*debris grows tail, npcs grow head
+*debris grows tail, npcs grow head, too big of a head explode and lose tail
 *another player with tail and shots hit tail
 *w/ added colors same color grows, complementary color shrinks, adjunct sticks, oblique bounces
 *size of debris cloud creates a force push on local npcs / debris, scales on debri size

@@ -1,5 +1,11 @@
 # BallGame
 todo:
+*shoot tail to cut and close off the space
+*shots bounce other colors into each other
+*ants hit yellow, they absorb into it
+*grow tail with debris
+*grow head with npcs
+*ants avoid white
 *shots kill ants and so does debris
 *ants eat size, ants come out of yellow on hit 
 *debris grows tail, npcs grow head

@@ -68,7 +68,7 @@ class Shot(Ball):
       Ball.update(self)
       self.life -= 1
       if self.life <= 0:
-         print("shot life over")
+         # print("shot life over")
          return False
       if self.pos[0] > WIDTH or self.pos[0] < 0 or self.pos[1] < 0 or self.pos[1] > HEIGHT:
          return False
@@ -124,7 +124,7 @@ def updateBalls(npc, player):
       # check each vs player
       if distance(player.pos, npc[i].pos) < npc[i].size + player.size:
          npc[i].tag = True
-         player.size += 1
+         player.size += 2
    #check vs each other
    for i in range(len(npc)-1):
       for j in range(i+1,len(npc)):
@@ -132,11 +132,12 @@ def updateBalls(npc, player):
             npc[i].pos, npc[j].pos = adjustCloser(npc[i].pos, npc[j].pos)
 
 class Joint(Ball):
-   def __init__(self, theA, theB, name):
+   def __init__(self, theA, theB, name, dist=PLAYER_SIZE):
       Ball.__init__(self, theA.pos)
       self.bodyA = theA
       self.bodyB = theB
-      self.dist = mag( sub(theA.pos, theB.pos) )
+      # self.dist = mag( sub(theA.pos, theB.pos) )
+      self.dist = dist
       self.tag = False
       self.name = name
 
@@ -202,18 +203,21 @@ def updateShots(npc, shots, debris, aux, player):
    return [ic for ic in npc if not ic.tag], [ish for ish in shots if not ish.tag]
 
    #debris enriches player, stuff disappears
-def updateDebris(player, debris):
+def updateDebris(player, debris, joints, aux):
    for stuff in debris:
       if distance(stuff.pos, player.pos) < stuff.size + player.size:
-         player.size += 1
+         # player.size += 1
+         joints.append(Joint(joints[-1].bodyB, Ball(randPointAtDistance(joints[len(joints)-1].pos, PLAYER_SIZE * 2)), name="A",dist=(PLAYER_SIZE * 2)))
+         aux.append(joints[len(joints)-1].bodyB)
+         print(f"Joint added:{len(joints)}")
          stuff.tag = True
-   return [stuff for stuff in debris if not stuff.tag]
+   return [stuff for stuff in debris if not stuff.tag], joints, aux
 
 def updateAnts(player, aux):
    for i in aux:
       if isinstance(i, Ant):
          if distance(player.pos, i.pos) < player.size:
-            print("Ant inside player")
+            # print("Ant inside player")
             i.tag = True
             if player.size > 5:
                player.size -= 1
@@ -342,7 +346,7 @@ while running:
          npc.append(Ball(( randrange(10,WIDTH - 10), - 10 - randrange(0,10) ), (0, FALL_SPEED), PLAYER_SIZE, color=colors[randrange(len(colors))] ))
    tick += 1
    debris = [stuff for stuff in debris if stuff.update()]
-   debris = updateDebris(player, debris)
+   debris, joints, aux = updateDebris(player, debris, joints, aux)
    #keep player in field
    if player.pos[0] < player.size:
       player.pos = (player.size, player.pos[1])

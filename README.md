@@ -1,36 +1,48 @@
 # BallGame
 todo:
-*if player moves towards edge of screen all points move
-*npcs update depending on direction
-*debris grows tail, npcs grow head, too big of a head explode and lose tail
+@strategy to create more whites 
+*bite tail causes body to head to stick to remainder, cut loop becomes, separate and contracting
+*form a planet by making clumps of yourself
+*form galaxies, or black holes to finish the level
+*only move ants to player when they move
+*mouse wheel zooms? and slows time
 *shoot tail to cut and close off the space
 *shots bounce other colors into each other
 *ants hit yellow, they absorb into it
-*grow tail with debris
-*grow head with npcs
 *ants avoid white
 *shots kill ants and so does debris
-*ants eat size, ants come out of yellow on hit 
-*debris grows tail, npcs grow head
+*planets attract yellow and then ants colonize 
 *another player with tail and shots hit tail
 *w/ added colors same color grows, complementary color shrinks, adjunct sticks, oblique bounces
 *size of debris cloud creates a force push on local npcs / debris, scales on debri size
-*move parallax 
-*move field based on player move
+*move parallax
+*some space clouds moving in background
 *slow random move npc, collision clumps or breaks based on speed and angle
+    *npc joints, because of collision
+AI:
 *ai player congtroller, behaviors, feed into movement and shooting
  decide between shooting and seeking npcs
-*interesting, mouse pushes instead of pulls
-*player blows up....what's inside?
-*dampen debris and leave
-*make life a component
-*consume shot on hit (maybe take away life from it, and size / scale)
-*make debris move away from hit direction, based on shot size
 *add ai controlled players, move around collecting and growing as well
-*random gen field
-*consumed npc delta from max slowly feeds back into the system
-*some space clouds moving in background
-*different players have different skills
+*fairy moving around, can chase, drops speed ups, or inc mouse range
+ *interesting, mouse pushes instead of pulls
+*invert the mouse effect near anomalies
+*shots cause clumping/compression depending on target hit
+*instead of head blowing up, size moves down tail, till ejects as white mass
+*ants stick to body and cut loose parts over time...or colonize with yellow growth
+*review components for attachments
+*make debris move away from hit direction, based on shot size, force fields
+ *some shots attract items as they pass, some move, some chain react
+*make head change color as npc increase, keep a list, over time pass down body
+*till eject
+*SONAR: sending out a wave, show lines on head for contacts, large objects will 
+ trigger a bunched signal
+*add creature that talks and gives quests
+
 *make two at different distances, mouse wheel to  change distance, angle from midline, creates effect
  as well as movement
-*construct with attractors
+*construct with attractors, create fields on clumps
+*create energy flows
+*sun gives fire
+*ice freezes
+*atmosphere give electric charge
+*atmosphere give chemical charge

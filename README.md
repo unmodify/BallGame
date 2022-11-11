@@ -1,5 +1,7 @@
 # BallGame
 todo:
+*if player moves towards edge of screen all points move
+*npcs update depending on direction
 *debris grows tail, npcs grow head, too big of a head explode and lose tail
 *shoot tail to cut and close off the space
 *shots bounce other colors into each other

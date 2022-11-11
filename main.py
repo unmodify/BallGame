@@ -20,7 +20,7 @@ WIDTH, HEIGHT = 1000, 600
 PLAYER_SPEED = .1
 PLAYER_SIZE = 5
 FALL_SPEED = 1
-colors = ['white', 'cyan', 'yellow', 'green']
+colors = ['white', 'cyan', 'yellow', 'green', 'magenta']
 NPC_COUNT = 200
 
 class Ball:
@@ -50,7 +50,6 @@ class Player(Ball):
       self.vel = (0, 0)
       self.dampen = .9
 
-
    def update(self, force):
       self.vel = add(self.vel, force)
       self.vel = mul(self.vel, self.dampen)
@@ -58,20 +57,25 @@ class Player(Ball):
 
 
 class Shot(Ball):
-   def __init__(self, pos, dir, size=1  ):
-      Ball.__init__(self,pos, dir, size )
+   def __init__(self, pos, dir, size=1):
+      Ball.__init__(self, pos, dir, size)
       self.size = int(self.size)
+      self.life = 200
 
    def update(self):
       global WIDTH, HEIGHT
       # print(f'shot:{self.pos},{self.dir}')
       Ball.update(self)
+      self.life -= 1
+      if self.life <= 0:
+         # print("shot life over")
+         return False
       if self.pos[0] > WIDTH or self.pos[0] < 0 or self.pos[1] < 0 or self.pos[1] > HEIGHT:
          return False
       return True
 
    def render(self, screen):
-      pg.draw.line(screen, self.color, self.pos, add(self.pos, mul( self.dir, 3)),self.size)
+      pg.draw.line(screen, self.color, self.pos, add(self.pos, mul(self.dir, 3)),self.size)
 
 
 class Debris(Shot):
@@ -90,8 +94,8 @@ class Debris(Shot):
       return True
 
    def render(self, screen):
-      Shot.render(self,screen)
-      Ball.render(self,screen)
+      Shot.render(self, screen)
+      Ball.render(self, screen)
 
 
 #to be a little closer to each other
@@ -120,7 +124,7 @@ def updateBalls(npc, player):
       # check each vs player
       if distance(player.pos, npc[i].pos) < npc[i].size + player.size:
          npc[i].tag = True
-         player.size += 1
+         player.size += 2
    #check vs each other
    for i in range(len(npc)-1):
       for j in range(i+1,len(npc)):
@@ -128,11 +132,12 @@ def updateBalls(npc, player):
             npc[i].pos, npc[j].pos = adjustCloser(npc[i].pos, npc[j].pos)
 
 class Joint(Ball):
-   def __init__(self, theA, theB, name):
+   def __init__(self, theA, theB, name, dist=PLAYER_SIZE):
       Ball.__init__(self, theA.pos)
       self.bodyA = theA
       self.bodyB = theB
-      self.dist = mag( sub(theA.pos, theB.pos) )
+      # self.dist = mag( sub(theA.pos, theB.pos) )
+      self.dist = dist
       self.tag = False
       self.name = name
 
@@ -151,9 +156,30 @@ class Joint(Ball):
    def render(self, screen):
       Shot.render(self, screen)
 
+class Ant(Shot):
+   def __init__(self, pos, dir, target, color='yellow'):
+      Shot.__init__(self, pos, dir)
+      self.target = target
+      self.color = color
+      self.size = PLAYER_SIZE
+
+   def update(self):
+      spread = .52
+      aangleDelta = uniform(0, spread) - (spread / 2.)
+      self.dir = (self.dir[0] * cos(aangleDelta) - self.dir[1] * sin(aangleDelta), self.dir[0] * sin(aangleDelta) + self.dir[1] * cos(aangleDelta))
+      self.dir = mul(normalize(self.dir), 2.2)
+      delta = sub(self.pos, self.target.pos)
+      delta = mul(normalize(delta), 1.5)
+      self.pos = add(self.dir, add(randPointAtDistance(self.pos, .3), delta))
+
+
+   def render(self, screen):
+      # print("ant render")
+      Shot.render(self, screen)
+
 #test shots vs npcs and creatwe debris on collision
 #udpate npc and shots list
-def updateShots(npc, shots, debris):
+def updateShots(npc, shots, debris, aux, player):
    for i in range(len(npc)):
       for j in range(len(shots)):
          if distance(shots[j].pos, npc[i].pos) < npc[i].size + shots[j].size * 2:
@@ -166,20 +192,36 @@ def updateShots(npc, shots, debris):
                delta = (-delta[1], delta[0])
                amag = mag(shots[j].dir)
                shots[j].dir = mul( normalize(delta), amag *.9)
+            elif npc[i].color == 'yellow':
+               for k in range(randrange(1, 40)):   # if this is set to i then all the yellow npcs release an ant
+                  print("ant made")
+                  aux.append(Ant(npc[i].pos, randPointAtDistance(npc[i].pos,1),player))
             for k in range(randrange(20) + 1):
                aAngle = randrange(360)/360.0*2*math.pi
                aDir = mul((math.cos(aAngle), math.sin(aAngle)), uniform(PLAYER_SIZE/6, PLAYER_SIZE))
                debris.append( Debris(npc[i].pos, add(aDir, npc[i].dir), randrange(5) + 1, life=(randrange(100)+ 20)))
    return [ic for ic in npc if not ic.tag], [ish for ish in shots if not ish.tag]
 
-#debris enriches player, stuff disappears
-def updateDebris(player, debris):
-    for stuff in debris:
-        if distance(stuff.pos, player.pos) < stuff.size + player.size:
-            player.size += 1
-            stuff.tag = True
-    return [stuff for stuff in debris if not stuff.tag]
-    
+   #debris enriches player, stuff disappears
+def updateDebris(player, debris, joints, aux):
+   for stuff in debris:
+      if distance(stuff.pos, player.pos) < stuff.size + player.size:
+         # player.size += 1
+         joints.append(Joint(joints[-1].bodyB, Ball(randPointAtDistance(joints[len(joints)-1].pos, PLAYER_SIZE * 2)), name="A",dist=(PLAYER_SIZE * 2)))
+         aux.append(joints[len(joints)-1].bodyB)
+         print(f"Joint added:{len(joints)}")
+         stuff.tag = True
+   return [stuff for stuff in debris if not stuff.tag], joints, aux
+
+def updateAnts(player, aux):
+   for i in aux:
+      if isinstance(i, Ant):
+         if distance(player.pos, i.pos) < player.size:
+            # print("Ant inside player")
+            i.tag = True
+            if player.size > 5:
+               player.size -= 1
+   return [i for i in aux if not i.tag]
 
 pg.init()
 screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -194,16 +236,17 @@ shots = [] #shots player fires
 debris = []    #debris from npcs fires
 joints = []    #debris from npcs fires
 joints.append( Joint(player,    Ball(randPointAtDistance(player.pos, PLAYER_SIZE * 1.5)),name="A"))
-for i in range(1,20,1):
+for i in range(1,3,1):
    joints.append( Joint(joints[i-1].bodyB, Ball(randPointAtDistance(joints[i-1].pos, PLAYER_SIZE * 1.5)),name=(chr(ord("B")+i))))
 aux = []
 for j in joints:
    aux.append(j.bodyB)
-
 npc = []
 for i in range(NPC_COUNT):
    # npc.append( {'pos':( randrange(10,WIDTH - 10), randrange(10, HEIGHT - 10) ),'tag':False} )
    npc.append( Ball(( randrange(10,WIDTH - 10), randrange(10, HEIGHT - 10) ), (0, FALL_SPEED), PLAYER_SIZE, color=colors[randrange(0,len(colors))] ))
+for i in range(100):
+   aux.append(Ant((400,200),normalize(sub(npc[0].pos, player.pos)), player, color='orange'))
 running = True
 while running:
    for event in pg.event.get():
@@ -282,7 +325,7 @@ while running:
    updateBalls(npc, player)
    #update shots
    shots = [shot for shot in shots if shot.update()]
-   npc, shots = updateShots(npc, shots, debris)    #check if we hit any npcs
+   npc, shots = updateShots(npc, shots, debris, aux, player)    #check if we hit any npcs
    #check if player burst
    # if player goes over size, explode and shrink
    if player.size > 50:
@@ -303,7 +346,7 @@ while running:
          npc.append(Ball(( randrange(10,WIDTH - 10), - 10 - randrange(0,10) ), (0, FALL_SPEED), PLAYER_SIZE, color=colors[randrange(len(colors))] ))
    tick += 1
    debris = [stuff for stuff in debris if stuff.update()]
-   debris = updateDebris(player, debris)
+   debris, joints, aux = updateDebris(player, debris, joints, aux)
    #keep player in field
    if player.pos[0] < player.size:
       player.pos = (player.size, player.pos[1])
@@ -315,10 +358,11 @@ while running:
       player.pos = (player.pos[0], HEIGHT - player.size)
    for a in aux:
       a.update()
-   print(f'JointsUp:{len(joints)}')
+   # print(f'JointsUp:{len(joints)}')
    for j in joints:
       # print(f'a:{j.bodyA}, b:{j.bodyB}')
       j.update()
+   aux = updateAnts(player, aux)
 #RENDER
    screen.fill('black')
    player.render(screen)

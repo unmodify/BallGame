@@ -1,6 +1,15 @@
 # BallGame
 todo:
 *debris grows tail, npcs grow head, too big of a head explode and lose tail
+*shoot tail to cut and close off the space
+*shots bounce other colors into each other
+*ants hit yellow, they absorb into it
+*grow tail with debris
+*grow head with npcs
+*ants avoid white
+*shots kill ants and so does debris
+*ants eat size, ants come out of yellow on hit 
+*debris grows tail, npcs grow head
 *another player with tail and shots hit tail
 *w/ added colors same color grows, complementary color shrinks, adjunct sticks, oblique bounces
 *size of debris cloud creates a force push on local npcs / debris, scales on debri size
